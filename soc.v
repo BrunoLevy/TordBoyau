@@ -7,8 +7,16 @@
 
 `define ARTY
 `define BOARD_FREQ 100
-`define CPU_FREQ   100
+
+// Uncomment to change CPU freq
+// If undefined, the 100MHz clock of
+// the board is used.
+`define CPU_FREQ   150
+
+`ifndef CPU_FREQ
+`define CPU_FREQ 100
 `define PASSTHROUGH_PLL
+`endif
 
 `define CONFIG_PC_PREDICT   // enables D -> F path (needed by RAS and GSHARE)
 `define CONFIG_RAS          // return address stack
@@ -28,7 +36,8 @@
 
 `include "clockworks.v"
 `include "emitter_uart.v"
-`include "TordBoyau.v"
+//`include "TordBoyau.v"
+`include "sequential_pipeline.v"
 
 module SOC (
     input  wire	     CLK, // system clock 
