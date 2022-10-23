@@ -4,14 +4,13 @@
  * Configurable 5-stages pipelined RV32IM
  * Bruno Levy, Sept 2022
  */
-
 `define ARTY
 `define BOARD_FREQ 100
 
 // Uncomment to change CPU freq
 // If undefined, the 100MHz clock of
 // the board is used.
-`define CPU_FREQ   150
+`define CPU_FREQ   160
 
 `ifndef CPU_FREQ
 `define CPU_FREQ 100

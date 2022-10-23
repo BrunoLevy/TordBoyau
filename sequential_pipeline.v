@@ -14,10 +14,6 @@ module Processor (
     output wire        IO_mem_wr     // IO write flag
 );
 
-`ifdef BENCH
-`include "riscv_disassembly.v"
-`endif
-
 /******************************************************************************/
    
    /* state machine (removed in next step that has a true pipeline) */
@@ -56,20 +52,6 @@ module Processor (
    Store   // mem[rs1+Simm] <- rs2
    SYSTEM  // special
  */
-
-/******************************************************************************/
-
-   /* Instruction decoder as functions (we will use them several times) */
-
-   /* Register indices */
-   function [4:0] rs1Id; input [31:0] I; rs1Id = I[19:15];      endfunction
-   function [4:0] rs2Id; input [31:0] I; rs2Id = I[24:20];      endfunction
-   function [4:0] shamt; input [31:0] I; shamt = I[24:20];      endfunction   
-   function [4:0] rdId;  input [31:0] I; rdId  = I[11:7];       endfunction
-   function [1:0] csrId; input [31:0] I; csrId = {I[27],I[21]}; endfunction
-
-   /* funct3 and funct7 */
-   function [2:0] funct3; input [31:0] I; funct3 = I[14:12]; endfunction
 
 /******************************************************************************/
    
@@ -127,9 +109,9 @@ module Processor (
    always @(posedge clk) begin
       if(state[D_bit]) begin
 	 DE_PC    <= FD_PC;
-	 DE_instr <= FD_instr;
+	 
 	 DE_isALUreg <= (FD_instr[6:2] == 5'b01100);
-	 DE_isALUimm <= (FD_instr[6:2] == 5'b00100);
+	 // DE_isALUimm <= (FD_instr[6:2] == 5'b00100);
 	 DE_isBranch <= (FD_instr[6:2] == 5'b11000);
 	 DE_isJALR   <= (FD_instr[6:2] == 5'b11001);
 	 DE_isJAL    <= (FD_instr[6:2] == 5'b11011);
@@ -144,7 +126,13 @@ module Processor (
 	 DE_Iimm <= {{21{FD_instr[31]}},FD_instr[30:20]};
 	 DE_Simm <= {{21{FD_instr[31]}},FD_instr[30:25],FD_instr[11:7]};
 	 DE_Bimm <= {{20{FD_instr[31]}},FD_instr[7],FD_instr[30:25],FD_instr[11:8],1'b0};
-	 DE_Jimm <= {{12{FD_instr[31]}},FD_instr[19:12],FD_instr[20],FD_instr[30:21],1'b0};      
+	 DE_Jimm <= {{12{FD_instr[31]}},FD_instr[19:12],FD_instr[20],FD_instr[30:21],1'b0};
+
+	 DE_shamt <= FD_instr[24:20];
+	 DE_rdId   <= FD_instr[11:7];
+	 DE_funct3 <= FD_instr[14:12];
+	 DE_funct7 <= FD_instr[30];
+	 DE_csrId  <= {FD_instr[27],FD_instr[21]};
       end
    end
 
@@ -156,12 +144,11 @@ module Processor (
    
 /******************************************************************************/
    reg  [31:0] DE_PC;
-   reg  [31:0] DE_instr;
    wire [31:0] DE_rs1 = registerFile[FD_instr[19:15]];
    wire [31:0] DE_rs2 = registerFile[FD_instr[24:20]];
 
    reg DE_isALUreg; 
-   reg DE_isALUimm; 
+// reg DE_isALUimm; 
    reg DE_isBranch; 
    reg DE_isJALR;   
    reg DE_isJAL;    
@@ -177,6 +164,13 @@ module Processor (
    reg [31:0] DE_Simm;
    reg [31:0] DE_Bimm;
    reg [31:0] DE_Jimm;      
+
+   reg [4:0]  DE_shamt;
+   
+   reg [4:0]  DE_rdId;
+   reg [1:0]  DE_csrId;
+   reg [2:0]  DE_funct3;
+   reg [5:5]  DE_funct7;
    
 /******************************************************************************/
 
@@ -187,10 +181,10 @@ module Processor (
    wire [31:0] E_aluIn1 = DE_rs1;
    
    wire [31:0] E_aluIn2 = (DE_isALUreg | DE_isBranch) ? DE_rs2 : DE_Iimm;
-   wire [4:0]  E_shamt  = DE_isALUreg ? DE_rs2[4:0] : shamt(DE_instr); 
+   wire [4:0]  E_shamt  = DE_isALUreg ? DE_rs2[4:0] : DE_shamt; 
 
-   wire E_minus = DE_instr[30] & DE_isALUreg;
-   wire E_arith_shift = DE_instr[30];
+   wire E_minus = DE_funct7[5] & DE_isALUreg;
+   wire E_arith_shift = DE_funct7[5];
    
    // The adder is used by both arithmetic instructions and JALR.
    wire [31:0] E_aluPlus = E_aluIn1 + E_aluIn2;
@@ -214,7 +208,7 @@ module Processor (
    endfunction
 
    wire [31:0] E_shifter_in = 
-                      (funct3(DE_instr)==3'b001) ? flip32(E_aluIn1) : E_aluIn1;
+                      (DE_funct3==3'b001) ? flip32(E_aluIn1) : E_aluIn1;
    
    /* verilator lint_off WIDTH */
    wire [31:0] E_shifter = 
@@ -225,7 +219,7 @@ module Processor (
 
    reg [31:0] E_aluOut;
    always @(*) begin
-      case(funct3(DE_instr))
+      case(DE_funct3)
 	3'b000: E_aluOut = E_minus ? E_aluMinus[31:0] : E_aluPlus;
 	3'b001: E_aluOut = E_leftshift;
 	3'b010: E_aluOut = {31'b0, E_LT};
@@ -241,7 +235,7 @@ module Processor (
 
    reg E_takeBranch;
    always @(*) begin
-      case (funct3(DE_instr))
+      case (DE_funct3)
 	3'b000: E_takeBranch = E_EQ;
 	3'b001: E_takeBranch = !E_EQ;
 	3'b100: E_takeBranch = E_LT;
@@ -258,7 +252,7 @@ module Processor (
          (DE_isBranch && E_takeBranch)
    );
 
-   wire [31:0] E_JumpOrBranchAddr =
+   wire [31:0] E_JumpOrBranchAddress =
 	DE_isBranch ? DE_PC + DE_Bimm :
 	DE_isJAL    ? DE_PC + DE_Jimm :
 	/* JALR */           {E_aluPlus[31:1],1'b0} ;
@@ -273,8 +267,6 @@ module Processor (
    
    always @(posedge clk) begin
       if(state[E_bit]) begin
-	 EM_PC      <= DE_PC;
-	 EM_instr   <= DE_instr;
 	 EM_rs2     <= DE_rs2;
 	 EM_Eresult <= E_result;
 	 EM_addr    <= DE_isStore ? DE_rs1 + DE_Simm : 
@@ -283,14 +275,19 @@ module Processor (
 	 EM_isStore  <= DE_isStore;
 	 EM_isBranch <= DE_isBranch;
 	 EM_isCSRRS  <= DE_isCSRRS;
+
+	 EM_rdId   <= DE_rdId;
+	 EM_csrId  <= DE_csrId;
+	 EM_funct3 <= DE_funct3;
+
+	 EM_JumpOrBranch        <= E_JumpOrBranch;
+	 EM_JumpOrBranchAddress <= E_JumpOrBranchAddress;
       end
    end
 
    assign halt = resetn & DE_isEBREAK;
    
 /******************************************************************************/
-   reg [31:0] EM_PC;
-   reg [31:0] EM_instr;
    reg [31:0] EM_rs2;
    reg [31:0] EM_Eresult;
    reg [31:0] EM_addr;
@@ -298,13 +295,18 @@ module Processor (
    reg 	      EM_isStore;
    reg 	      EM_isBranch;
    reg 	      EM_isCSRRS;
+   reg [4:0]  EM_rdId;
+   reg [1:0]  EM_csrId;
+   reg [2:0]  EM_funct3;
+
+   reg        EM_JumpOrBranch;
+   reg [31:0] EM_JumpOrBranchAddress;
 /******************************************************************************/
 
                      /*** M: Memory ***/
 
-   wire [2:0] M_funct3 = funct3(EM_instr);
-   wire M_isB = (M_funct3[1:0] == 2'b00);
-   wire M_isH = (M_funct3[1:0] == 2'b01);
+   wire M_isB = (EM_funct3[1:0] == 2'b00);
+   wire M_isH = (EM_funct3[1:0] == 2'b01);
 
    /*************** STORE **************************/
 
@@ -359,8 +361,6 @@ module Processor (
    
    always @(posedge clk) begin
       if(state[M_bit]) begin
-	 MW_PC        <= EM_PC;
-	 MW_instr     <= EM_instr;
 	 MW_Eresult   <= EM_Eresult;
 	 MW_IOresult  <= IO_mem_rdata;
 	 MW_addr      <= EM_addr;
@@ -368,7 +368,9 @@ module Processor (
 	 MW_isStore   <= EM_isStore;
 	 MW_isBranch  <= EM_isBranch;
 	 MW_isCSRRS   <= EM_isCSRRS;
-	 case(csrId(EM_instr)) 
+	 MW_funct3    <= EM_funct3;
+	 MW_rdId      <= EM_rdId;
+	 case(EM_csrId) 
 	   2'b00: MW_CSRresult = cycle[31:0];
 	   2'b10: MW_CSRresult = cycle[63:32];
 	   2'b01: MW_CSRresult = instret[31:0];
@@ -383,8 +385,6 @@ module Processor (
    end
 
 /******************************************************************************/
-   reg [31:0] MW_PC; 
-   reg [31:0] MW_instr; 
    reg [31:0] MW_Eresult;
    reg [31:0] MW_addr;
    reg [31:0] MW_Mdata;
@@ -394,14 +394,15 @@ module Processor (
    reg 	      MW_isStore;
    reg 	      MW_isBranch;
    reg 	      MW_isCSRRS;
+   reg [2:0]  MW_funct3;
+   reg [4:0]  MW_rdId;
 /******************************************************************************/
 
                      /*** W: WriteBack ***/
 		     
-   wire [2:0] W_funct3 = funct3(MW_instr);
-   wire W_isB = (W_funct3[1:0] == 2'b00);
-   wire W_isH = (W_funct3[1:0] == 2'b01);
-   wire W_sext = !W_funct3[2];		     
+   wire W_isB = (MW_funct3[1:0] == 2'b00);
+   wire W_isH = (MW_funct3[1:0] == 2'b01);
+   wire W_sext = !MW_funct3[2];		     
    wire W_isIO = MW_addr[22];
 
    /*************** LOAD ****************************/
@@ -420,13 +421,13 @@ module Processor (
 	       MW_Eresult;
 
    assign wbEnable =
-        !MW_isBranch && !MW_isStore && (rdId(MW_instr) != 0);
+        !MW_isBranch && !MW_isStore && (MW_rdId != 0);
 
-   assign wbRdId = rdId(MW_instr);
+   assign wbRdId = MW_rdId;
    
 /******************************************************************************/
-   assign jumpOrBranchAddress = E_JumpOrBranchAddr;
-   assign jumpOrBranch        = E_JumpOrBranch;
+   assign jumpOrBranchAddress = EM_JumpOrBranchAddress;
+   assign jumpOrBranch        = EM_JumpOrBranch;
 /******************************************************************************/
 
 `ifdef BENCH   
@@ -435,19 +436,6 @@ module Processor (
    end
 `endif   
 
-   /*
-   always @(posedge clk) begin
-      if(resetn & state[E_bit]) begin
-	 $write("[E] PC=%h ", DE_PC);
-	 $write(" ");	 
-	 riscv_disasm(DE_instr,DE_PC);
-	 $write("  rs1=0x%h  rs2=0x%h  ",DE_rs1, DE_rs2);
-	 $write("  JoB=%d ", jumpOrBranch);
-	 $write("\n");
-      end
-   end
-   */
-   
 /******************************************************************************/
    
 endmodule
