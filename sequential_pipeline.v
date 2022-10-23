@@ -61,18 +61,6 @@ module Processor (
 
    /* Instruction decoder as functions (we will use them several times) */
 
-   /* The 10 "recognizers" for the 10 codeops */
-   function isALUreg; input [31:0] I; isALUreg=(I[6:0]==7'b0110011); endfunction
-   function isALUimm; input [31:0] I; isALUimm=(I[6:0]==7'b0010011); endfunction
-   function isBranch; input [31:0] I; isBranch=(I[6:0]==7'b1100011); endfunction
-   function isJALR;   input [31:0] I; isJALR  =(I[6:0]==7'b1100111); endfunction
-   function isJAL;    input [31:0] I; isJAL   =(I[6:0]==7'b1101111); endfunction
-   function isAUIPC;  input [31:0] I; isAUIPC =(I[6:0]==7'b0010111); endfunction
-   function isLUI;    input [31:0] I; isLUI   =(I[6:0]==7'b0110111); endfunction
-   function isLoad;   input [31:0] I; isLoad  =(I[6:0]==7'b0000011); endfunction
-   function isStore;  input [31:0] I; isStore =(I[6:0]==7'b0100011); endfunction
-   function isSYSTEM; input [31:0] I; isSYSTEM=(I[6:0]==7'b1110011); endfunction
-
    /* Register indices */
    function [4:0] rs1Id; input [31:0] I; rs1Id = I[19:15];      endfunction
    function [4:0] rs2Id; input [31:0] I; rs2Id = I[24:20];      endfunction
@@ -82,46 +70,7 @@ module Processor (
 
    /* funct3 and funct7 */
    function [2:0] funct3; input [31:0] I; funct3 = I[14:12]; endfunction
-   function [6:0] funct7; input [31:0] I; funct7 = I[31:25]; endfunction      
 
-   
-   /* EBREAK and CSRRS instruction "recognizers" */
-   function isEBREAK; 
-      input [31:0] I; 
-      isEBREAK = (isSYSTEM(I) && funct3(I) == 3'b000); 
-   endfunction
-
-   function isCSRRS; 
-      input [31:0] I; 
-      isCSRRS = (isSYSTEM(I) && funct3(I) == 3'b010); 
-   endfunction
-   
-   /* The 5 immediate formats */
-   function [31:0] Uimm; 
-      input [31:0] I; 
-      Uimm={I[31:12],{12{1'b0}}}; 
-   endfunction
-   
-   function [31:0] Iimm; 
-      input [31:0] I; 
-      Iimm={{21{I[31]}},I[30:20]};
-   endfunction
-   
-   function [31:0] Simm; 
-      input [31:0] I; 
-      Simm={{21{I[31]}},I[30:25],I[11:7]};
-   endfunction
-
-   function [31:0] Bimm;
-      input [31:0] I;
-      Bimm = {{20{I[31]}},I[7],I[30:25],I[11:8],1'b0};
-   endfunction 
-
-   function [31:0] Jimm;
-      input [31:0] I;
-      Jimm = {{12{I[31]}},I[19:12],I[20],I[30:21],1'b0};      
-   endfunction
-   
 /******************************************************************************/
    
    reg [63:0] cycle;   
@@ -173,37 +122,43 @@ module Processor (
    wire [31:0] wbData;
    wire [4:0]  wbRdId;
 
-   reg [31:0] RegisterBank [0:31];
+   reg [31:0] registerFile [0:31];
    
    always @(posedge clk) begin
       if(state[D_bit]) begin
 	 DE_PC    <= FD_PC;
 	 DE_instr <= FD_instr;
-	 
-	 DE_isALUreg <= isALUreg(FD_instr); 
-	 DE_isALUimm <= isALUimm(FD_instr); 
-	 DE_isBranch <= isBranch(FD_instr); 
-	 DE_isJALR <= isJALR(FD_instr);   
-	 DE_isJAL <= isJAL(FD_instr);    
-	 DE_isAUIPC <= isAUIPC(FD_instr);  
-	 DE_isLUI <= isLUI(FD_instr);    
-	 DE_isLoad <= isLoad(FD_instr);   
-	 DE_isStore <= isStore(FD_instr);  
-	 DE_isSYSTEM <= isSYSTEM(FD_instr); 
+	 DE_isALUreg <= (FD_instr[6:2] == 5'b01100);
+	 DE_isALUimm <= (FD_instr[6:2] == 5'b00100);
+	 DE_isBranch <= (FD_instr[6:2] == 5'b11000);
+	 DE_isJALR   <= (FD_instr[6:2] == 5'b11001);
+	 DE_isJAL    <= (FD_instr[6:2] == 5'b11011);
+	 DE_isAUIPC  <= (FD_instr[6:2] == 5'b00101);
+	 DE_isLUI    <= (FD_instr[6:2] == 5'b01101);
+	 DE_isLoad   <= (FD_instr[6:2] == 5'b00000);
+	 DE_isStore  <= (FD_instr[6:2] == 5'b01000);
+	 DE_isCSRRS   <= (FD_instr[6:2] == 5'b11100) && (FD_instr[14:12] == 3'b010);
+	 DE_isEBREAK  <= (FD_instr[6:2] == 5'b11100) && (FD_instr[14:12] == 3'b000);
+
+	 DE_Uimm <= {FD_instr[31:12],{12{1'b0}}}; 
+	 DE_Iimm <= {{21{FD_instr[31]}},FD_instr[30:20]};
+	 DE_Simm <= {{21{FD_instr[31]}},FD_instr[30:25],FD_instr[11:7]};
+	 DE_Bimm <= {{20{FD_instr[31]}},FD_instr[7],FD_instr[30:25],FD_instr[11:8],1'b0};
+	 DE_Jimm <= {{12{FD_instr[31]}},FD_instr[19:12],FD_instr[20],FD_instr[30:21],1'b0};      
       end
    end
 
    always @(posedge clk) begin
       if(wbEnable) begin
-	 RegisterBank[wbRdId] <= wbData;
+	 registerFile[wbRdId] <= wbData;
       end
    end
    
 /******************************************************************************/
-   reg [31:0] DE_PC;
-   reg [31:0] DE_instr;
-   wire [31:0] DE_rs1 = RegisterBank[rs1Id(FD_instr)];
-   wire [31:0] DE_rs2 = RegisterBank[rs2Id(FD_instr)];
+   reg  [31:0] DE_PC;
+   reg  [31:0] DE_instr;
+   wire [31:0] DE_rs1 = registerFile[FD_instr[19:15]];
+   wire [31:0] DE_rs2 = registerFile[FD_instr[24:20]];
 
    reg DE_isALUreg; 
    reg DE_isALUimm; 
@@ -213,8 +168,15 @@ module Processor (
    reg DE_isAUIPC;  
    reg DE_isLUI;    
    reg DE_isLoad;   
-   reg DE_isStore;  
-   reg DE_isSYSTEM; 
+   reg DE_isStore;
+   reg DE_isEBREAK;
+   reg DE_isCSRRS;
+
+   reg [31:0] DE_Uimm;
+   reg [31:0] DE_Iimm;
+   reg [31:0] DE_Simm;
+   reg [31:0] DE_Bimm;
+   reg [31:0] DE_Jimm;      
    
 /******************************************************************************/
 
@@ -224,7 +186,7 @@ module Processor (
 
    wire [31:0] E_aluIn1 = DE_rs1;
    
-   wire [31:0] E_aluIn2 = (DE_isALUreg | DE_isBranch) ? DE_rs2 : Iimm(DE_instr);
+   wire [31:0] E_aluIn2 = (DE_isALUreg | DE_isBranch) ? DE_rs2 : DE_Iimm;
    wire [4:0]  E_shamt  = DE_isALUreg ? DE_rs2[4:0] : shamt(DE_instr); 
 
    wire E_minus = DE_instr[30] & DE_isALUreg;
@@ -297,14 +259,14 @@ module Processor (
    );
 
    wire [31:0] E_JumpOrBranchAddr =
-	DE_isBranch ? DE_PC + Bimm(DE_instr) :
-	DE_isJAL    ? DE_PC + Jimm(DE_instr) :
+	DE_isBranch ? DE_PC + DE_Bimm :
+	DE_isJAL    ? DE_PC + DE_Jimm :
 	/* JALR */           {E_aluPlus[31:1],1'b0} ;
 
    wire [31:0] E_result = 
 	(DE_isJAL | DE_isJALR) ? DE_PC+4                :
-	 DE_isLUI              ? Uimm(DE_instr)         :
-	 DE_isAUIPC            ? DE_PC + Uimm(DE_instr) : 
+	 DE_isLUI              ? DE_Uimm                :
+	 DE_isAUIPC            ? DE_PC + DE_Uimm        : 
         E_aluOut                                        ;
 	
    /**************************************************************/
@@ -315,12 +277,16 @@ module Processor (
 	 EM_instr   <= DE_instr;
 	 EM_rs2     <= DE_rs2;
 	 EM_Eresult <= E_result;
-	 EM_addr    <= DE_isStore ? DE_rs1 + Simm(DE_instr) : 
-                                    DE_rs1 + Iimm(DE_instr) ;
+	 EM_addr    <= DE_isStore ? DE_rs1 + DE_Simm : 
+                                    DE_rs1 + DE_Iimm ;
+	 EM_isLoad   <= DE_isLoad;
+	 EM_isStore  <= DE_isStore;
+	 EM_isBranch <= DE_isBranch;
+	 EM_isCSRRS  <= DE_isCSRRS;
       end
    end
 
-   assign halt = resetn & isEBREAK(DE_instr);
+   assign halt = resetn & DE_isEBREAK;
    
 /******************************************************************************/
    reg [31:0] EM_PC;
@@ -328,6 +294,10 @@ module Processor (
    reg [31:0] EM_rs2;
    reg [31:0] EM_Eresult;
    reg [31:0] EM_addr;
+   reg 	      EM_isLoad;
+   reg 	      EM_isStore;
+   reg 	      EM_isBranch;
+   reg 	      EM_isCSRRS;
 /******************************************************************************/
 
                      /*** M: Memory ***/
@@ -365,11 +335,11 @@ module Processor (
    wire  M_isRAM        = !M_isIO;
 
    assign IO_mem_addr  = EM_addr;
-   assign IO_mem_wr    = state[M_bit] & isStore(EM_instr) && M_isIO; 
+   assign IO_mem_wr    = state[M_bit] & EM_isStore & M_isIO; 
    assign IO_mem_wdata = EM_rs2;
 
    wire [3:0] M_wmask = 
-	      {4{isStore(EM_instr) & M_isRAM & state[M_bit]}} & M_STORE_wmask;
+	      {4{EM_isStore & M_isRAM & state[M_bit]}} & M_STORE_wmask;
    
    reg [31:0] DATARAM [0:16383]; // 16384 4-bytes words 
                                  // 64 Kb of data RAM in total
@@ -394,6 +364,10 @@ module Processor (
 	 MW_Eresult   <= EM_Eresult;
 	 MW_IOresult  <= IO_mem_rdata;
 	 MW_addr      <= EM_addr;
+	 MW_isLoad    <= EM_isLoad;
+	 MW_isStore   <= EM_isStore;
+	 MW_isBranch  <= EM_isBranch;
+	 MW_isCSRRS   <= EM_isCSRRS;
 	 case(csrId(EM_instr)) 
 	   2'b00: MW_CSRresult = cycle[31:0];
 	   2'b10: MW_CSRresult = cycle[63:32];
@@ -416,6 +390,10 @@ module Processor (
    reg [31:0] MW_Mdata;
    reg [31:0] MW_IOresult;
    reg [31:0] MW_CSRresult;
+   reg 	      MW_isLoad;
+   reg 	      MW_isStore;
+   reg 	      MW_isBranch;
+   reg 	      MW_isCSRRS;
 /******************************************************************************/
 
                      /*** W: WriteBack ***/
@@ -437,12 +415,12 @@ module Processor (
                                                       MW_Mdata ;
    
    assign wbData = 
-	       isLoad(MW_instr)  ? (W_isIO ? MW_IOresult : W_Mresult) :
-	       isCSRRS(MW_instr) ? MW_CSRresult :
+	       MW_isLoad  ? (W_isIO ? MW_IOresult : W_Mresult) :
+	       MW_isCSRRS ? MW_CSRresult :
 	       MW_Eresult;
 
    assign wbEnable =
-        !isBranch(MW_instr) && !isStore(MW_instr) && (rdId(MW_instr) != 0);
+        !MW_isBranch && !MW_isStore && (rdId(MW_instr) != 0);
 
    assign wbRdId = rdId(MW_instr);
    
