@@ -5,12 +5,20 @@
  * Bruno Levy, Sept 2022
  */
 `define ARTY
+
+`ifdef BENCH
+`define BOARD_FREQ 10
+`define CPU_FREQ   10
+`define PASSTHROUGH_PLL
+`else
+
 `define BOARD_FREQ 100
 
 // Uncomment to change CPU freq
 // If undefined, the 100MHz clock of
 // the board is used.
 `define CPU_FREQ   160
+`endif
 
 `ifndef CPU_FREQ
 `define CPU_FREQ 100
@@ -35,8 +43,10 @@
 
 `include "clockworks.v"
 `include "emitter_uart.v"
-//`include "TordBoyau.v"
-`include "sequential_pipeline.v"
+`include "TordBoyau.v"
+//`include "sequential_pipeline.v" // replaces TordBoyau with a 5-state core to identify bottlenecks
+//`include "sequential_pipeline_Store_in_E.v" // replaces TordBoyau with a 5-state core to identify bottlenecks
+
 
 module SOC (
     input  wire	     CLK, // system clock 
