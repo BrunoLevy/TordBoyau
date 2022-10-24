@@ -120,15 +120,10 @@ module Processor (
    
    always @(posedge clk) begin
       if(state[D_bit]) begin
-	 DE_PC    <= FD_PC;
-	 
 	 DE_isALUreg <= (FD_instr[6:2] == 5'b01100);
-	 // DE_isALUimm <= (FD_instr[6:2] == 5'b00100);
 	 DE_isBranch <= (FD_instr[6:2] == 5'b11000);
 	 DE_isJALR   <= (FD_instr[6:2] == 5'b11001);
 	 DE_isJAL    <= D_isJAL;
-	 DE_isAUIPC  <= (FD_instr[6:2] == 5'b00101);
-	 DE_isLUI    <= (FD_instr[6:2] == 5'b01101);
 	 DE_isLoad   <= D_isLoad; 
 	 DE_isStore  <= (FD_instr[6:2] == 5'b01000);
 	 DE_isCSRRS  <= 
@@ -138,7 +133,6 @@ module Processor (
 
 	 DE_Iimm <= D_Iimm; 
 
-	 DE_shamt <= FD_instr[24:20];
 	 DE_rdId   <= FD_instr[11:7];
 	 DE_funct3 <= FD_instr[14:12];
 	 DE_funct7 <= FD_instr[30];
@@ -166,7 +160,6 @@ module Processor (
    end
    
 /******************************************************************************/
-   reg  [31:0] DE_PC;
    wire [31:0] DE_rs1 = registerFile[FD_instr[19:15]];
    wire [31:0] DE_rs2 = registerFile[FD_instr[24:20]];
 
@@ -174,8 +167,6 @@ module Processor (
    reg DE_isBranch; 
    reg DE_isJALR;   
    reg DE_isJAL;    
-   reg DE_isAUIPC;   
-   reg DE_isLUI;    
    reg DE_isLoad;   
    reg DE_isStore;
    reg DE_isEBREAK;
@@ -183,8 +174,6 @@ module Processor (
 
    reg [31:0] DE_Iimm;
 
-   reg [4:0]  DE_shamt;
-   
    reg [4:0]  DE_rdId;
    reg [1:0]  DE_csrId;
    reg [2:0]  DE_funct3;
@@ -205,7 +194,6 @@ module Processor (
    wire [31:0] E_aluIn1 = DE_rs1;
    
    wire [31:0] E_aluIn2 = (DE_isALUreg | DE_isBranch) ? DE_rs2 : DE_Iimm;
-   wire [4:0]  E_shamt  = DE_isALUreg ? DE_rs2[4:0] : DE_shamt; 
 
    wire E_minus = DE_funct7[5] & DE_isALUreg;
    wire E_arith_shift = DE_funct7[5];
@@ -365,7 +353,6 @@ module Processor (
 	 EM_isCSRRS  <= DE_isCSRRS;
 
 	 EM_rdId   <= DE_rdId;
-	 EM_csrId  <= DE_csrId;
 	 EM_funct3 <= DE_funct3;
 
 	 EM_JumpOrBranch        <= E_JumpOrBranch;
@@ -384,7 +371,6 @@ module Processor (
    reg 	      EM_isBranch;
    reg 	      EM_isCSRRS;
    reg [4:0]  EM_rdId;
-   reg [1:0]  EM_csrId;
    reg [2:0]  EM_funct3;
 
    reg [31:0] EM_CSRdata;
