@@ -12,7 +12,7 @@
 // Uncomment to change CPU freq
 // If undefined, the 100MHz clock of
 // the board is used.
-// `define CPU_FREQ   160
+`define CPU_FREQ   160
 
 
 `define CONFIG_PC_PREDICT   // enables D -> F path (needed by RAS and GSHARE)
@@ -53,9 +53,9 @@
 
 `include "clockworks.v"
 `include "emitter_uart.v"
-`include "TordBoyau.v"
+//`include "TordBoyau.v"
 //`include "sequential_pipeline.v" // replaces TordBoyau with a 5-state core to identify bottlenecks
-//`include "sequential_pipeline_Store_in_E.v" // replaces TordBoyau with a 5-state core to identify bottlenecks
+`include "sequential_pipeline_Store_in_E.v" // replaces TordBoyau with a 5-state core to identify bottlenecks
 
 
 module SOC (

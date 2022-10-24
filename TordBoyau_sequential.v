@@ -123,14 +123,19 @@ module Processor (
 	 DE_isLUI    <= (FD_instr[6:2] == 5'b01101);
 	 DE_isLoad   <= D_isLoad; // (FD_instr[6:2] == 5'b00000);
 	 DE_isStore  <= (FD_instr[6:2] == 5'b01000);
-	 DE_isCSRRS   <= (FD_instr[6:2] == 5'b11100) && (FD_instr[14:12] == 3'b010);
-	 DE_isEBREAK  <= (FD_instr[6:2] == 5'b11100) && (FD_instr[14:12] == 3'b000);
+	 DE_isCSRRS  <= 
+               (FD_instr[6:2] == 5'b11100) && (FD_instr[14:12] == 3'b010);
+	 DE_isEBREAK <= 
+                (FD_instr[6:2] == 5'b11100) && (FD_instr[14:12] == 3'b000);
 
 	 DE_Uimm <= {FD_instr[31:12],{12{1'b0}}}; 
-	 DE_Iimm <= D_Iimm; // {{21{FD_instr[31]}},FD_instr[30:20]};
-	 DE_Simm <= D_Simm; // {{21{FD_instr[31]}},FD_instr[30:25],FD_instr[11:7]};
-	 DE_Bimm <= {{20{FD_instr[31]}},FD_instr[7],FD_instr[30:25],FD_instr[11:8],1'b0};
-	 DE_Jimm <= {{12{FD_instr[31]}},FD_instr[19:12],FD_instr[20],FD_instr[30:21],1'b0};
+	 DE_Iimm <= D_Iimm; 
+	 DE_Simm <= D_Simm; 
+	 DE_Bimm <= 
+         {{20{FD_instr[31]}},FD_instr[7],FD_instr[30:25],FD_instr[11:8],1'b0};
+	 
+	 DE_Jimm <= 
+         {{12{FD_instr[31]}},FD_instr[19:12],FD_instr[20],FD_instr[30:21],1'b0};
 
 	 DE_shamt <= FD_instr[24:20];
 	 DE_rdId   <= FD_instr[11:7];
