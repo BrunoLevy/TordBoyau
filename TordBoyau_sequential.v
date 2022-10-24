@@ -121,6 +121,7 @@ module Processor (
    wire [31:0] D_Bimm = 
          {{20{FD_instr[31]}},FD_instr[7],FD_instr[30:25],FD_instr[11:8],1'b0};
 
+   // Load-Store
    wire [31:0] D_addr = DE_rs1 + (D_isLoad ? D_Iimm : D_Simm);
    wire        D_isB = (FD_instr[13:12] == 2'b00);
    wire        D_isH = (FD_instr[13:12] == 2'b01);
@@ -139,7 +140,6 @@ module Processor (
 	 DE_isBranch <= D_isBranch;
 	 DE_isALUregorBranch <= D_isALUreg || D_isBranch;
 	 DE_isJALR   <= (FD_instr[6:2] == 5'b11001);
-	 DE_isJAL    <= D_isJAL;
 	 DE_isLoad   <= D_isLoad; 
 	 DE_isStore  <= D_isStore;
 	 DE_isCSRRS  <= D_isSYSTEM && (FD_instr[14:12] == 3'b010);
@@ -185,7 +185,6 @@ module Processor (
    reg DE_isALUreg; 
    reg DE_isBranch; 
    reg DE_isJALR;   
-   reg DE_isJAL;    
    reg DE_isLoad;   
    reg DE_isStore;
    reg DE_isEBREAK;
@@ -253,17 +252,16 @@ module Processor (
    wire [31:0] E_leftshift = flip32(E_rightshift);
 
    wire [31:0] E_aluOut =
-	       DE_funct3_is[0] ? (E_minus ? E_aluMinus[31:0] : E_aluPlus):
-	       DE_funct3_is[1] ? E_leftshift :
-	       DE_funct3_is[2] ? {31'b0, E_LT} :
-	       DE_funct3_is[3] ? {31'b0, E_LTU} :
+	       DE_funct3_is[0] ? (E_minus ? E_aluMinus[31:0] : E_aluPlus) :
+	       DE_funct3_is[1] ? E_leftshift         :
+	       DE_funct3_is[2] ? {31'b0, E_LT}       :
+	       DE_funct3_is[3] ? {31'b0, E_LTU}      :
 	       DE_funct3_is[4] ? E_aluIn1 ^ E_aluIn2 :
-	       DE_funct3_is[5] ? E_rightshift :
+	       DE_funct3_is[5] ? E_rightshift        :
 	       DE_funct3_is[6] ? E_aluIn1 | E_aluIn2 :
  	                         E_aluIn1 & E_aluIn2 ;
- 
    
-   /*********** Branch, JAL, JALR ***********************************/
+   /****************** Branch ******************************/
 
    wire E_takeBranch =
 	DE_funct3_is[0] ?  E_EQ  :
@@ -272,7 +270,7 @@ module Processor (
 	DE_funct3_is[5] ? !E_LT  :
 	DE_funct3_is[6] ?  E_LTU : 
                           !E_LTU ;
-   
+
    /****************** Store ******************************/
 
 
@@ -286,13 +284,6 @@ module Processor (
    assign E_STORE_data[31:24] = DE_addr[0] ? DE_rs2[7:0]  :
 			        DE_addr[1] ? DE_rs2[15:8] : DE_rs2[31:24] ;
 
-   // The memory write mask:
-   //    1111                     if writing a word
-   //    0011 or 1100             if writing a halfword
-   //                                (depending on EM_addr[1])
-   //    0001, 0010, 0100 or 1000 if writing a byte
-   //                                (depending on EM_addr[1:0])
-
    wire  E_isIO         = DE_addr[22];
    wire  E_isRAM        = !E_isIO;
 
@@ -300,8 +291,6 @@ module Processor (
    assign IO_mem_wr    = state[E_bit] & DE_isStore & E_isIO; 
    assign IO_mem_wdata = DE_rs2;
 
-   wire [3:0] E_wmask = DE_storeMask;
-//	      {4{DE_isStore & E_isRAM}} & DE_storeMask;
    
    reg [31:0] DATARAM [0:16383]; // 16384 4-bytes words 
                                  // 64 Kb of data RAM in total
@@ -310,10 +299,10 @@ module Processor (
    always @(posedge clk) begin
       if(state[E_bit]) begin
 	 EM_Mdata <= DATARAM[E_word_addr];
-	 if(E_wmask[0]) DATARAM[E_word_addr][ 7:0 ] <= E_STORE_data[ 7:0 ];
-	 if(E_wmask[1]) DATARAM[E_word_addr][15:8 ] <= E_STORE_data[15:8 ];
-	 if(E_wmask[2]) DATARAM[E_word_addr][23:16] <= E_STORE_data[23:16];
-	 if(E_wmask[3]) DATARAM[E_word_addr][31:24] <= E_STORE_data[31:24];
+	 if(DE_storeMask[0]) DATARAM[E_word_addr][ 7:0 ] <= E_STORE_data[ 7:0 ];
+	 if(DE_storeMask[1]) DATARAM[E_word_addr][15:8 ] <= E_STORE_data[15:8 ];
+	 if(DE_storeMask[2]) DATARAM[E_word_addr][23:16] <= E_STORE_data[23:16];
+	 if(DE_storeMask[3]) DATARAM[E_word_addr][31:24] <= E_STORE_data[31:24];
       end
    end
 
@@ -325,7 +314,7 @@ module Processor (
 	   2'b10: EM_CSRdata <= cycle[63:32];
 	   2'b01: EM_CSRdata <= instret[31:0];
 	   2'b11: EM_CSRdata <= instret[63:32];	 
-	 endcase // case (DE_csrId)
+	 endcase 
       end
    end
 
