@@ -695,7 +695,7 @@ module Processor (
    reg [31:0] DATARAM [0:4095]; // 4096 4-bytes words 
                                 // 16 Kb of data RAM in total
    
-   wire [13:0] M_word_addr = EM_addr[13:2];
+   wire [11:0] M_word_addr = EM_addr[13:2];
    
    always @(posedge clk) begin
       if(M_wmask[0]) DATARAM[M_word_addr][ 7:0 ] <= M_STORE_data[ 7:0 ];
