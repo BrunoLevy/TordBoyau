@@ -27,7 +27,9 @@
 `endif
 
 `ifdef ARTY
+`ifndef BENCH
 `define NEGATIVE_RESET
+`endif
 `endif
 
 module Clockworks 

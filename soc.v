@@ -6,24 +6,14 @@
  */
 `define ARTY
 
-`ifdef BENCH
-`define BOARD_FREQ 10
-`define CPU_FREQ   10
-`define PASSTHROUGH_PLL
-`else
 
 `define BOARD_FREQ 100
 
 // Uncomment to change CPU freq
 // If undefined, the 100MHz clock of
 // the board is used.
-`define CPU_FREQ   160
-`endif
+// `define CPU_FREQ   160
 
-`ifndef CPU_FREQ
-`define CPU_FREQ 100
-`define PASSTHROUGH_PLL
-`endif
 
 `define CONFIG_PC_PREDICT   // enables D -> F path (needed by RAS and GSHARE)
 `define CONFIG_RAS          // return address stack
@@ -38,6 +28,26 @@
 `define CONFIG_INITIALIZE // initialize register file and BHT table
                             // (required by Icarus/iverilog 
                             // and by some synth tools)
+
+
+/******************************************************************************/
+
+`ifndef CPU_FREQ
+`define CPU_FREQ 100
+`define PASSTHROUGH_PLL
+`endif
+
+`ifdef BENCH
+`undef BOARD_FREQ
+`undef CPU_FREQ
+`define BOARD_FREQ 10
+`define CPU_FREQ   10
+`ifndef PASSTHROUGH_PLL
+`define PASSTHROUGH_PLL
+`endif
+`endif
+
+/******************************************************************************/
 
 `default_nettype none
 
