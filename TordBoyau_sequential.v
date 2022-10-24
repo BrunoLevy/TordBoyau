@@ -109,7 +109,10 @@ module Processor (
    wire D_isLoad       = (FD_instr[6:2] == 5'b00000);
    wire D_isJALorJALR  = (FD_instr[2] & FD_instr[6]); 
    wire D_isJAL        = FD_instr[3]; 
-   
+   wire D_isALUreg     = (FD_instr[6:2] == 5'b01100);
+   wire D_isBranch     = (FD_instr[6:2] == 5'b11000);
+   wire D_isStore      = (FD_instr[6:2] == 5'b01000);
+   wire D_isSYSTEM     = (FD_instr[6:2] == 5'b11100);
    wire [31:0] D_Iimm = {{21{FD_instr[31]}},FD_instr[30:20]};
    wire [31:0] D_Simm = {{21{FD_instr[31]}},FD_instr[30:25],FD_instr[11:7]};
    wire [31:0] D_Uimm = {FD_instr[31:12],{12{1'b0}}};
@@ -117,28 +120,40 @@ module Processor (
          {{12{FD_instr[31]}},FD_instr[19:12],FD_instr[20],FD_instr[30:21],1'b0};
    wire [31:0] D_Bimm = 
          {{20{FD_instr[31]}},FD_instr[7],FD_instr[30:25],FD_instr[11:8],1'b0};
+
+   wire [31:0] D_addr = DE_rs1 + (D_isLoad ? D_Iimm : D_Simm);
+   wire        D_isB = (FD_instr[13:12] == 2'b00);
+   wire        D_isH = (FD_instr[13:12] == 2'b01);
+   wire [3:0]  D_storeMask = D_isB ?
+	                     (D_addr[1] ?
+		                (D_addr[0] ? 4'b1000 : 4'b0100) :
+		                (D_addr[0] ? 4'b0010 : 4'b0001)
+                             ) :
+	                    D_isH ? (D_addr[1] ? 4'b1100 : 4'b0011) :
+                                 4'b1111 ;
+   wire        D_isRAM = !D_addr[22];
    
    always @(posedge clk) begin
       if(state[D_bit]) begin
-	 DE_isALUreg <= (FD_instr[6:2] == 5'b01100);
-	 DE_isBranch <= (FD_instr[6:2] == 5'b11000);
+	 DE_isALUreg <= D_isALUreg;
+	 DE_isBranch <= D_isBranch;
+	 DE_isALUregorBranch <= D_isALUreg || D_isBranch;
 	 DE_isJALR   <= (FD_instr[6:2] == 5'b11001);
 	 DE_isJAL    <= D_isJAL;
 	 DE_isLoad   <= D_isLoad; 
-	 DE_isStore  <= (FD_instr[6:2] == 5'b01000);
-	 DE_isCSRRS  <= 
-               (FD_instr[6:2] == 5'b11100) && (FD_instr[14:12] == 3'b010);
-	 DE_isEBREAK <= 
-                (FD_instr[6:2] == 5'b11100) && (FD_instr[14:12] == 3'b000);
+	 DE_isStore  <= D_isStore;
+	 DE_isCSRRS  <= D_isSYSTEM && (FD_instr[14:12] == 3'b010);
+	 DE_isEBREAK <= D_isSYSTEM && (FD_instr[14:12] == 3'b000);
 
 	 DE_Iimm <= D_Iimm; 
 
 	 DE_rdId   <= FD_instr[11:7];
 	 DE_funct3 <= FD_instr[14:12];
+	 DE_funct3_is <= 8'b00000001 << FD_instr[14:12];
 	 DE_funct7 <= FD_instr[30];
 	 DE_csrId  <= {FD_instr[27],FD_instr[21]};
 
-	 DE_addr <= DE_rs1 + (D_isLoad ? D_Iimm : D_Simm);
+	 DE_addr <= D_addr;
 
 	 // Code below is equivalent to:
 	 // DE_PCplus4orUimm = 
@@ -150,6 +165,10 @@ module Processor (
 	 DE_isJALorJALRorLUIorAUIPC <= FD_instr[2];
 
 	 DE_PCplusBorJimm <= FD_PC + (D_isJAL ? D_Jimm : D_Bimm);
+
+	 DE_isJALorJALR <= (FD_instr[2] & FD_instr[6]);
+
+	 DE_storeMask <= D_storeMask & {4{D_isRAM & D_isStore}};
       end
    end
 
@@ -177,14 +196,20 @@ module Processor (
    reg [4:0]  DE_rdId;
    reg [1:0]  DE_csrId;
    reg [2:0]  DE_funct3;
+   (* onehot *) reg [7:0] DE_funct3_is;
    reg [5:5]  DE_funct7;
 
    reg [31:0] DE_addr;
 
    reg 	      DE_isJALorJALRorLUIorAUIPC;
+   reg        DE_isJALorJALR;
+   reg        DE_isALUregorBranch;
+   
    reg [31:0] DE_PCplus4orUimm;
-
    reg [31:0] DE_PCplusBorJimm;
+
+   reg [3:0] DE_storeMask;
+   
 /******************************************************************************/
 
                      /*** E: Execute ***/
@@ -192,8 +217,7 @@ module Processor (
    /*********** the ALU *************************************************/
 
    wire [31:0] E_aluIn1 = DE_rs1;
-   
-   wire [31:0] E_aluIn2 = (DE_isALUreg | DE_isBranch) ? DE_rs2 : DE_Iimm;
+   wire [31:0] E_aluIn2 = DE_isALUregorBranch ? DE_rs2 : DE_Iimm;
 
    wire E_minus = DE_funct7[5] & DE_isALUreg;
    wire E_arith_shift = DE_funct7[5];
@@ -206,7 +230,7 @@ module Processor (
    wire [32:0] E_aluMinus = {1'b1, ~E_aluIn2} + {1'b0,E_aluIn1} + 33'b1;
    wire        E_LT  = 
                  (E_aluIn1[31] ^ E_aluIn2[31]) ? E_aluIn1[31] : E_aluMinus[32];
-   wire        E_LTU = E_aluMinus[32];
+   wire        E_LTU =  E_aluMinus[32];
    wire        E_EQ  = (E_aluMinus[31:0] == 0);
 
    // Flip a 32 bit word. Used by the shifter (a single shifter for
@@ -219,57 +243,36 @@ module Processor (
 		x[24], x[25], x[26], x[27], x[28], x[29], x[30], x[31]};
    endfunction
 
-   wire [31:0] E_shifter_in = 
-                      (DE_funct3==3'b001) ? flip32(E_aluIn1) : E_aluIn1;
+   wire [31:0] E_shifter_in = DE_funct3_is[1] ? flip32(E_aluIn1) : E_aluIn1;
    
    /* verilator lint_off WIDTH */
-   wire [31:0] E_shifter = 
+   wire [31:0] E_rightshift = 
        $signed({E_arith_shift & E_aluIn1[31], E_shifter_in}) >>> E_aluIn2[4:0];
    /* verilator lint_on WIDTH */
 
-   wire [31:0] E_leftshift = flip32(E_shifter);
+   wire [31:0] E_leftshift = flip32(E_rightshift);
 
-   reg [31:0] E_aluOut;
-   always @(*) begin
-      case(DE_funct3)
-	3'b000: E_aluOut = E_minus ? E_aluMinus[31:0] : E_aluPlus;
-	3'b001: E_aluOut = E_leftshift;
-	3'b010: E_aluOut = {31'b0, E_LT};
-	3'b011: E_aluOut = {31'b0, E_LTU};
-	3'b100: E_aluOut = E_aluIn1 ^ E_aluIn2;
-	3'b101: E_aluOut = E_shifter;
-	3'b110: E_aluOut = E_aluIn1 | E_aluIn2;
-	3'b111: E_aluOut = E_aluIn1 & E_aluIn2;
-      endcase
-   end
+   wire [31:0] E_aluOut =
+	       DE_funct3_is[0] ? (E_minus ? E_aluMinus[31:0] : E_aluPlus):
+	       DE_funct3_is[1] ? E_leftshift :
+	       DE_funct3_is[2] ? {31'b0, E_LT} :
+	       DE_funct3_is[3] ? {31'b0, E_LTU} :
+	       DE_funct3_is[4] ? E_aluIn1 ^ E_aluIn2 :
+	       DE_funct3_is[5] ? E_rightshift :
+	       DE_funct3_is[6] ? E_aluIn1 | E_aluIn2 :
+ 	                         E_aluIn1 & E_aluIn2 ;
+ 
    
    /*********** Branch, JAL, JALR ***********************************/
 
-   reg E_takeBranch;
-   always @(*) begin
-      case (DE_funct3)
-	3'b000: E_takeBranch = E_EQ;
-	3'b001: E_takeBranch = !E_EQ;
-	3'b100: E_takeBranch = E_LT;
-	3'b101: E_takeBranch = !E_LT;
-	3'b110: E_takeBranch = E_LTU;
-	3'b111: E_takeBranch = !E_LTU;
-	default: E_takeBranch = 1'b0;
-      endcase 
-   end
+   wire E_takeBranch =
+	DE_funct3_is[0] ?  E_EQ  :
+	DE_funct3_is[1] ? !E_EQ  :
+	DE_funct3_is[4] ?  E_LT  :
+	DE_funct3_is[5] ? !E_LT  :
+	DE_funct3_is[6] ?  E_LTU : 
+                          !E_LTU ;
    
-   wire E_JumpOrBranch = (
-         DE_isJAL  || 
-	 DE_isJALR || 
-         (DE_isBranch && E_takeBranch)
-   );
-
-   wire [31:0] E_JumpOrBranchAddress =
-       DE_isJALR ? {E_aluPlus[31:1],1'b0} : DE_PCplusBorJimm;
-
-   wire [31:0] E_result =
-       DE_isJALorJALRorLUIorAUIPC ? DE_PCplus4orUimm : E_aluOut; 
-
    /****************** Store ******************************/
 
 
@@ -290,15 +293,6 @@ module Processor (
    //    0001, 0010, 0100 or 1000 if writing a byte
    //                                (depending on EM_addr[1:0])
 
-   wire [3:0] E_STORE_wmask = E_isB ?
-	                     (DE_addr[1] ?
-		                (DE_addr[0] ? 4'b1000 : 4'b0100) :
-		                (DE_addr[0] ? 4'b0010 : 4'b0001)
-                             ) :
-	                     E_isH ? (DE_addr[1] ? 4'b1100 : 4'b0011) :
-                                     4'b1111 ;
-
-
    wire  E_isIO         = DE_addr[22];
    wire  E_isRAM        = !E_isIO;
 
@@ -306,8 +300,8 @@ module Processor (
    assign IO_mem_wr    = state[E_bit] & DE_isStore & E_isIO; 
    assign IO_mem_wdata = DE_rs2;
 
-   wire [3:0] E_wmask = 
-	      {4{DE_isStore & E_isRAM & state[E_bit]}} & E_STORE_wmask;
+   wire [3:0] E_wmask = DE_storeMask;
+//	      {4{DE_isStore & E_isRAM}} & DE_storeMask;
    
    reg [31:0] DATARAM [0:16383]; // 16384 4-bytes words 
                                  // 64 Kb of data RAM in total
@@ -343,7 +337,15 @@ module Processor (
 
    always @(posedge clk) begin
       if(state[E_bit]) begin
-	 EM_Eresult  <= E_result;
+	 EM_Eresult  <= DE_isJALorJALRorLUIorAUIPC ? 
+                        DE_PCplus4orUimm : E_aluOut;
+
+	 EM_JumpOrBranch        <= DE_isJALorJALR || 
+                                   (DE_isBranch && E_takeBranch);
+	 
+	 EM_JumpOrBranchAddress <= DE_isJALR ? {E_aluPlus[31:1],1'b0} 
+                                             : DE_PCplusBorJimm;
+	 
 	 EM_addr     <= DE_addr[1:0];
 	 EM_isIO     <= DE_addr[22];
 	 
@@ -354,9 +356,6 @@ module Processor (
 
 	 EM_rdId   <= DE_rdId;
 	 EM_funct3 <= DE_funct3;
-
-	 EM_JumpOrBranch        <= E_JumpOrBranch;
-	 EM_JumpOrBranchAddress <= E_JumpOrBranchAddress;
       end
    end
 
