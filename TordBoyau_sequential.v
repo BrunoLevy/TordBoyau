@@ -107,9 +107,11 @@ module Processor (
    reg [31:0] registerFile [0:31];
 
    wire D_isLoad = (FD_instr[6:2] == 5'b00000);
+   wire D_isJALorJALR  = (FD_instr[2] & FD_instr[6]); 
+   
    wire [31:0] D_Iimm = {{21{FD_instr[31]}},FD_instr[30:20]};
    wire [31:0] D_Simm = {{21{FD_instr[31]}},FD_instr[30:25],FD_instr[11:7]};
-   
+   wire [31:0] D_Uimm = {FD_instr[31:12],{12{1'b0}}};    
    always @(posedge clk) begin
       if(state[D_bit]) begin
 	 DE_PC    <= FD_PC;
@@ -121,14 +123,13 @@ module Processor (
 	 DE_isJAL    <= (FD_instr[6:2] == 5'b11011);
 	 DE_isAUIPC  <= (FD_instr[6:2] == 5'b00101);
 	 DE_isLUI    <= (FD_instr[6:2] == 5'b01101);
-	 DE_isLoad   <= D_isLoad; // (FD_instr[6:2] == 5'b00000);
+	 DE_isLoad   <= D_isLoad; 
 	 DE_isStore  <= (FD_instr[6:2] == 5'b01000);
 	 DE_isCSRRS  <= 
                (FD_instr[6:2] == 5'b11100) && (FD_instr[14:12] == 3'b010);
 	 DE_isEBREAK <= 
                 (FD_instr[6:2] == 5'b11100) && (FD_instr[14:12] == 3'b000);
 
-	 DE_Uimm <= {FD_instr[31:12],{12{1'b0}}}; 
 	 DE_Iimm <= D_Iimm; 
 	 DE_Simm <= D_Simm; 
 	 DE_Bimm <= 
@@ -144,6 +145,16 @@ module Processor (
 	 DE_csrId  <= {FD_instr[27],FD_instr[21]};
 
 	 DE_addr <= DE_rs1 + (D_isLoad ? D_Iimm : D_Simm);
+
+	 // Code below is equivalent to:
+	 // DE_PCplus4orUimm = 
+	 //    ((isLUI ? 0 : FD_PC)) + ((isJAL | isJALR) ? 4 : Uimm)
+	 // (knowing that isLUI | isAUIPC | isJAL | isJALR)
+	 DE_PCplus4orUimm <= ({32{FD_instr[6:5]!=2'b01}} & FD_PC) + 
+                             (D_isJALorJALR ? 4 : D_Uimm);
+
+	 DE_isJALorJALRorLUIorAUIPC <= FD_instr[2];
+	 
       end
    end
 
@@ -159,7 +170,6 @@ module Processor (
    wire [31:0] DE_rs2 = registerFile[FD_instr[24:20]];
 
    reg DE_isALUreg; 
-// reg DE_isALUimm; 
    reg DE_isBranch; 
    reg DE_isJALR;   
    reg DE_isJAL;    
@@ -170,7 +180,6 @@ module Processor (
    reg DE_isEBREAK;
    reg DE_isCSRRS;
 
-   reg [31:0] DE_Uimm;
    reg [31:0] DE_Iimm;
    reg [31:0] DE_Simm;
    reg [31:0] DE_Bimm;
@@ -184,7 +193,9 @@ module Processor (
    reg [5:5]  DE_funct7;
 
    reg [31:0] DE_addr;
-   
+
+   reg 	      DE_isJALorJALRorLUIorAUIPC;
+   reg [31:0] DE_PCplus4orUimm;   
 /******************************************************************************/
 
                      /*** E: Execute ***/
@@ -270,11 +281,8 @@ module Processor (
 	DE_isJAL    ? DE_PC + DE_Jimm :
 	/* JALR */           {E_aluPlus[31:1],1'b0} ;
 
-   wire [31:0] E_result = 
-	(DE_isJAL | DE_isJALR) ? DE_PC+4                :
-	 DE_isLUI              ? DE_Uimm                :
-	 DE_isAUIPC            ? DE_PC + DE_Uimm        : 
-        E_aluOut                                        ;
+   wire [31:0] E_result =
+	       DE_isJALorJALRorLUIorAUIPC ? DE_PCplus4orUimm : E_aluOut; 
 
    /****************** Store ******************************/
 

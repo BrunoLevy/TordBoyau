@@ -54,8 +54,7 @@
 `include "clockworks.v"
 `include "emitter_uart.v"
 //`include "TordBoyau.v"
-//`include "sequential_pipeline.v" // replaces TordBoyau with a 5-state core to identify bottlenecks
-`include "sequential_pipeline_Store_in_E.v" // replaces TordBoyau with a 5-state core to identify bottlenecks
+`include "TordBoyau_sequential.v" // replaces TordBoyau with a 5-state core to identify bottlenecks
 
 
 module SOC (
