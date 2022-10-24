@@ -106,12 +106,18 @@ module Processor (
 
    reg [31:0] registerFile [0:31];
 
-   wire D_isLoad = (FD_instr[6:2] == 5'b00000);
+   wire D_isLoad       = (FD_instr[6:2] == 5'b00000);
    wire D_isJALorJALR  = (FD_instr[2] & FD_instr[6]); 
+   wire D_isJAL        = FD_instr[3]; 
    
    wire [31:0] D_Iimm = {{21{FD_instr[31]}},FD_instr[30:20]};
    wire [31:0] D_Simm = {{21{FD_instr[31]}},FD_instr[30:25],FD_instr[11:7]};
-   wire [31:0] D_Uimm = {FD_instr[31:12],{12{1'b0}}};    
+   wire [31:0] D_Uimm = {FD_instr[31:12],{12{1'b0}}};
+   wire [31:0] D_Jimm = 
+         {{12{FD_instr[31]}},FD_instr[19:12],FD_instr[20],FD_instr[30:21],1'b0};
+   wire [31:0] D_Bimm = 
+         {{20{FD_instr[31]}},FD_instr[7],FD_instr[30:25],FD_instr[11:8],1'b0};
+   
    always @(posedge clk) begin
       if(state[D_bit]) begin
 	 DE_PC    <= FD_PC;
@@ -120,7 +126,7 @@ module Processor (
 	 // DE_isALUimm <= (FD_instr[6:2] == 5'b00100);
 	 DE_isBranch <= (FD_instr[6:2] == 5'b11000);
 	 DE_isJALR   <= (FD_instr[6:2] == 5'b11001);
-	 DE_isJAL    <= (FD_instr[6:2] == 5'b11011);
+	 DE_isJAL    <= D_isJAL;
 	 DE_isAUIPC  <= (FD_instr[6:2] == 5'b00101);
 	 DE_isLUI    <= (FD_instr[6:2] == 5'b01101);
 	 DE_isLoad   <= D_isLoad; 
@@ -131,12 +137,6 @@ module Processor (
                 (FD_instr[6:2] == 5'b11100) && (FD_instr[14:12] == 3'b000);
 
 	 DE_Iimm <= D_Iimm; 
-	 DE_Simm <= D_Simm; 
-	 DE_Bimm <= 
-         {{20{FD_instr[31]}},FD_instr[7],FD_instr[30:25],FD_instr[11:8],1'b0};
-	 
-	 DE_Jimm <= 
-         {{12{FD_instr[31]}},FD_instr[19:12],FD_instr[20],FD_instr[30:21],1'b0};
 
 	 DE_shamt <= FD_instr[24:20];
 	 DE_rdId   <= FD_instr[11:7];
@@ -154,7 +154,8 @@ module Processor (
                              (D_isJALorJALR ? 4 : D_Uimm);
 
 	 DE_isJALorJALRorLUIorAUIPC <= FD_instr[2];
-	 
+
+	 DE_PCplusBorJimm <= FD_PC + (D_isJAL ? D_Jimm : D_Bimm);
       end
    end
 
@@ -173,7 +174,7 @@ module Processor (
    reg DE_isBranch; 
    reg DE_isJALR;   
    reg DE_isJAL;    
-   reg DE_isAUIPC;  
+   reg DE_isAUIPC;   
    reg DE_isLUI;    
    reg DE_isLoad;   
    reg DE_isStore;
@@ -181,9 +182,6 @@ module Processor (
    reg DE_isCSRRS;
 
    reg [31:0] DE_Iimm;
-   reg [31:0] DE_Simm;
-   reg [31:0] DE_Bimm;
-   reg [31:0] DE_Jimm;      
 
    reg [4:0]  DE_shamt;
    
@@ -195,7 +193,9 @@ module Processor (
    reg [31:0] DE_addr;
 
    reg 	      DE_isJALorJALRorLUIorAUIPC;
-   reg [31:0] DE_PCplus4orUimm;   
+   reg [31:0] DE_PCplus4orUimm;
+
+   reg [31:0] DE_PCplusBorJimm;
 /******************************************************************************/
 
                      /*** E: Execute ***/
@@ -277,12 +277,10 @@ module Processor (
    );
 
    wire [31:0] E_JumpOrBranchAddress =
-	DE_isBranch ? DE_PC + DE_Bimm :
-	DE_isJAL    ? DE_PC + DE_Jimm :
-	/* JALR */           {E_aluPlus[31:1],1'b0} ;
+       DE_isJALR ? {E_aluPlus[31:1],1'b0} : DE_PCplusBorJimm;
 
    wire [31:0] E_result =
-	       DE_isJALorJALRorLUIorAUIPC ? DE_PCplus4orUimm : E_aluOut; 
+       DE_isJALorJALRorLUIorAUIPC ? DE_PCplus4orUimm : E_aluOut; 
 
    /****************** Store ******************************/
 
@@ -358,7 +356,9 @@ module Processor (
    always @(posedge clk) begin
       if(state[E_bit]) begin
 	 EM_Eresult  <= E_result;
-	 EM_addr     <= DE_addr;
+	 EM_addr     <= DE_addr[1:0];
+	 EM_isIO     <= DE_addr[22];
+	 
 	 EM_isLoad   <= DE_isLoad;
 	 EM_isStore  <= DE_isStore;
 	 EM_isBranch <= DE_isBranch;
@@ -377,7 +377,8 @@ module Processor (
    
 /******************************************************************************/
    reg [31:0] EM_Eresult;
-   reg [31:0] EM_addr;
+   reg [1:0]  EM_addr;
+   reg        EM_isIO;
    reg 	      EM_isLoad;
    reg 	      EM_isStore;
    reg 	      EM_isBranch;
@@ -401,7 +402,6 @@ module Processor (
    wire M_isB = (EM_funct3[1:0] == 2'b00);
    wire M_isH = (EM_funct3[1:0] == 2'b01);
    wire M_sext = !EM_funct3[2];		     
-   wire M_isIO = EM_addr[22];
 
    /*************** LOAD ****************************/
    
@@ -416,7 +416,7 @@ module Processor (
    always @(posedge clk) begin
       if(state[M_bit]) begin
 	 MW_rdId <= EM_rdId;
-	 MW_WBdata <= EM_isLoad  ? (M_isIO ? EM_IOdata : M_Mresult) :
+	 MW_WBdata <= EM_isLoad  ? (EM_isIO ? EM_IOdata : M_Mresult) :
 		      EM_isCSRRS ?  EM_CSRdata :
 		      EM_Eresult ;
 	 MW_wbEnable <= !EM_isBranch && !EM_isStore && (EM_rdId != 0);
