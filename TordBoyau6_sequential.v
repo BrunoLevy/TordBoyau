@@ -134,7 +134,7 @@ module Processor (
 	 DE_isStore  <= D_isStore;
 	 DE_isCSRRS  <= D_isSYSTEM && (FD_instr[14:12] == 3'b010);
 	 DE_isEBREAK <= D_isSYSTEM && (FD_instr[14:12] == 3'b000);
-
+	 
 	 DE_Iimm    <= D_Iimm;
 	 DE_IorSimm <= D_isStore ? D_Simm : D_Iimm;
 
@@ -144,19 +144,14 @@ module Processor (
 	 DE_funct7 <= FD_instr[30];
 	 DE_csrId  <= {FD_instr[27],FD_instr[21]};
 
-	 // Code below is equivalent to:
-	 // DE_PCplus4orUimm = 
-	 //    ((isLUI ? 0 : FD_PC)) + ((isJAL | isJALR) ? 4 : Uimm)
-	 // (knowing that isLUI | isAUIPC | isJAL | isJALR)
-	 DE_PCplus4orUimm <= ({32{FD_instr[6:5]!=2'b01}} & FD_PC) + 
-                             (D_isJALorJALR ? 4 : D_Uimm);
-
-	 DE_isJALorJALRorLUIorAUIPC <= FD_instr[2];
-
 	 DE_PCplusBorJimm <= FD_PC + (D_isJAL ? D_Jimm : D_Bimm);
 
-	 DE_isJALorJALR <= (FD_instr[2] & FD_instr[6]);
-
+	 DE_isJALorJALR <= D_isJALorJALR; 
+	 DE_isLUI       <= (FD_instr[6:2]==5'b01101) ;
+	 DE_isAUIPC     <= (FD_instr[6:2]==5'b00101) ;
+	 DE_Uimm       <= D_Uimm;
+	 DE_PCplus4    <= FD_PC + 4;
+	 DE_PCplusUimm <= FD_PC + D_Uimm;
       end
    end
 
@@ -177,9 +172,14 @@ module Processor (
    reg DE_isStore;
    reg DE_isEBREAK;
    reg DE_isCSRRS;
+   reg DE_isLUI;
+   reg DE_isAUIPC;
+   reg DE_isJALorJALR;
+   reg DE_isALUregorBranch;
 
    reg [31:0] DE_Iimm;
    reg [31:0] DE_IorSimm;
+   reg [31:0] DE_Uimm;
    
    reg [4:0]  DE_rdId;
    reg [1:0]  DE_csrId;
@@ -187,15 +187,10 @@ module Processor (
    (* onehot *) reg [7:0] DE_funct3_is;
    reg [5:5]  DE_funct7;
 
-   reg [31:0] DE_addr;
-
-   reg 	      DE_isJALorJALRorLUIorAUIPC;
-   reg        DE_isJALorJALR;
-   reg        DE_isALUregorBranch;
-   
-   reg [31:0] DE_PCplus4orUimm;
+   reg [31:0] DE_PCplus4;
    reg [31:0] DE_PCplusBorJimm;
-
+   reg [31:0] DE_PCplusUimm;
+   
 /******************************************************************************/
 
                      /*** E: Execute ***/
@@ -273,9 +268,12 @@ module Processor (
    
    always @(posedge clk) begin
       if(state[E_bit]) begin
-	 ES_Eresult  <= DE_isJALorJALRorLUIorAUIPC ? 
-                        DE_PCplus4orUimm : E_aluOut;
 
+	 ES_Eresult <= DE_isJALorJALR ? DE_PCplus4    :
+		       DE_isLUI       ? DE_Uimm       :
+		       DE_isAUIPC     ? DE_PCplusUimm :
+		       E_aluOut;
+	 
 	 ES_JumpOrBranch        <= DE_isJALorJALR || 
                                    (DE_isBranch && E_takeBranch);
 	 

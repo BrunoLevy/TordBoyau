@@ -12,7 +12,7 @@
 // Uncomment to change CPU freq
 // If undefined, the 100MHz clock of
 // the board is used.
-`define CPU_FREQ   130
+`define CPU_FREQ   160
 
 
 `define CONFIG_PC_PREDICT   // enables D -> F path (needed by RAS and GSHARE)
