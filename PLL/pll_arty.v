@@ -4,7 +4,7 @@
  * output freq = freq / CLKOUT0_DIVIDE
  * 
  * CLKIN1_PERIOD = 10 (ARTY internal clock = 100 MHz)
- * freq = 80 to 100 MHz: use CLKFBOUT_MULT = freq/10, DIVCLK_DIVIDE=1 and CLKOUT0_DIVIDE=10
+ * freq = 80 to 160 MHz: use CLKFBOUT_MULT = freq/10, DIVCLK_DIVIDE=1 and CLKOUT0_DIVIDE=10
  */ 
 
  module femtoPLL #(
@@ -16,6 +16,8 @@
 
  wire clk_feedback;
  wire clk_internal;
+
+
 
  PLLE2_ADV #(
     .CLKFBOUT_MULT(freq/10),  // Multiply value for all CLKOUT (2-64)

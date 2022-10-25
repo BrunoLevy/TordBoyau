@@ -1,5 +1,6 @@
 /**
  * Sequential pipeline
+ * 5 stages
  * Used to test what maxfreq could be
  */
  
