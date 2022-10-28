@@ -17,8 +17,6 @@
  wire clk_feedback;
  wire clk_internal;
 
-
-
  PLLE2_ADV #(
     .CLKFBOUT_MULT(freq/10),  // Multiply value for all CLKOUT (2-64)
     .DIVCLK_DIVIDE(1),        // Master division value , (1-56)
@@ -36,7 +34,12 @@
      .CLKIN1(pclk),
      .PWRDWN(1'b0),
      .RST(1'b0),
-     .CLKFBIN(clk_feedback)    // 1-bit input, feedback clock
+     .CLKFBIN(clk_feedback),  // 1-bit input, feedback clock
+     
+     .CLKOUT1(), .CLKOUT2(), .CLKOUT3(), .CLKOUT4(), .CLKOUT5(),
+     .DO(), .DRDY(), .LOCKED(), 
+     .CLKIN2(), .CLKINSEL(),
+     .DADDR(), .DCLK(), .DEN(), .DI(), .DWE()
  );
 
  BUFG bufg(

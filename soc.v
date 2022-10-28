@@ -56,7 +56,7 @@
 //`include "TordBoyau5.v"
 // replaces TordBoyau with a 5-state core to identify bottlenecks
 //`include "TordBoyau5_sequential.v" 
-`include "TordBoyau6_sequential.v" 
+`include "TordBoyau6_sequential_new.v" 
 
 
 module SOC (
