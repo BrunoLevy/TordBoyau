@@ -41,7 +41,9 @@ Other firmwares can be compiled, see [learn-fpga, pipeline
 tutorial](https://github.com/BrunoLevy/learn-fpga/blob/master/FemtoRV/TUTORIALS/FROM_BLINKER_TO_RISCV/PIPELINE.md)
 for more details (`PROGROM.hex` and `DATARAM.hex` are portable between
 both projects, just make sure you target the same instruction set
-(RV32I or RV32IM).
+(RV32I or RV32IM). You will need also to remove all the lines of zeroes
+after line 1024 in `DATARAM.hex` (the core in `learn-fpga` is configured with
+64kB of data ram, and here it is 16kB, which suffices for most examples).
 
 # Performance (RV32I) (A35T/Vivado)
 
@@ -63,8 +65,10 @@ both projects, just make sure you target the same instruction set
 | gshare               | 2.837          |  1.597       | 17.753    | 1760  | 711   | < 80 MHz |
 | gshare + RAS         | 2.866          |  1.634       | 18.215    | 1801  | 875   | < 80 MHz |
 
-Fails to meet timings even at 80 MHz, to be investigated (note: however, seems to work
-at that frequency in practice, even at higher frequency).
+- Vivado complains that it fails to meet timings even at 80 MHz, to be investigated...
+- However, in practice, it seems to work at 140 MHz with the largest configuration (`gshare + RAS`). CoreMarks
+  and Dhrystones both validate correct operation, and RayStones generates the correct image.
+
 
 # Debugger / disassembler
 
