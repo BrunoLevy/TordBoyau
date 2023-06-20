@@ -12,7 +12,7 @@
 // Uncomment to change CPU freq
 // If undefined, the 100MHz clock of
 // the board is used.
-`define CPU_FREQ   160
+//`define CPU_FREQ   110
 
 
 `define CONFIG_PC_PREDICT   // enables D -> F path (needed by RAS and GSHARE)
@@ -21,7 +21,7 @@
 
 //`define CONFIG_RV32M      // RV32M instruction set (MUL,DIV,REM)
 
-//`define CONFIG_DEBUG      // debug mode, displays execution
+`define CONFIG_DEBUG      // debug mode, displays execution
                             // See "debugger" section in source 
                             // to define breakpoints
 
@@ -53,10 +53,10 @@
 
 `include "clockworks.v"
 `include "emitter_uart.v"
-//`include "TordBoyau5.v"
+`include "TordBoyau5.v"
 // replaces TordBoyau with a 5-state core to identify bottlenecks
 //`include "TordBoyau5_sequential.v" 
-`include "TordBoyau6_sequential_new.v" 
+//`include "TordBoyau6_sequential_new.v" 
 
 
 module SOC (
