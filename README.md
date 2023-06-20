@@ -25,6 +25,27 @@ Several parameters can be configured in `soc.v`:
 |`CONFIG_DEBUG`      | Enables built-in debugger/disassembler (used in simulation)                 |
 |`CONFIG_INITIALIZE` | Initializes register file and BHT (required by Icarus and some synth tools) |
 
+# Firmware
+
+Firmware takes the form of two files, `PROGROM.hex` that contains
+code, and `DATARAM.hex` that contains variables initialization. The
+included firmware computes an image in raytracing and sends it to the
+TTY (1000000 bauds). It also measures the average CPI, and a
+'raystones' performance score (pixels/s/MHz).
+
+Other firmwares can be compiled, see [learn-fpga, pipeline
+tutorial](https://github.com/BrunoLevy/learn-fpga/blob/master/FemtoRV/TUTORIALS/FROM_BLINKER_TO_RISCV/PIPELINE.md)
+for more details (`PROGROM.hex` and `DATARAM.hex` are portable between
+both projects, just make sure you target the same instruction set
+(RV32I or RV32IM).
+
+# Debugger / disassembler
+
+![](Images/debugger.png)
+
+
+
+
 # Documentation on the design 
 - [Course - episode I](https://github.com/BrunoLevy/learn-fpga/blob/master/FemtoRV/TUTORIALS/FROM_BLINKER_TO_RISCV/README.md)
 - [Course - episode II](https://github.com/BrunoLevy/learn-fpga/blob/master/FemtoRV/TUTORIALS/FROM_BLINKER_TO_RISCV/PIPELINE.md)
