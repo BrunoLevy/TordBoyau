@@ -12,8 +12,7 @@
 // Uncomment to change CPU freq
 // If undefined, the 100MHz clock of
 // the board is used.
-//`define CPU_FREQ   110
-
+//`define CPU_FREQ   120
 
 `define CONFIG_PC_PREDICT   // enables D -> F path (needed by RAS and GSHARE)
 `define CONFIG_RAS          // return address stack
@@ -25,7 +24,7 @@
                             // See "debugger" section in source 
                             // to define breakpoints
 
-`define CONFIG_INITIALIZE // initialize register file and BHT table
+//`define CONFIG_INITIALIZE // initialize register file and BHT table
                             // (required by Icarus/iverilog 
                             // and by some synth tools)
 

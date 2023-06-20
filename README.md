@@ -43,15 +43,25 @@ for more details (`PROGROM.hex` and `DATARAM.hex` are portable between
 both projects, just make sure you target the same instruction set
 (RV32I or RV32IM).
 
-# Performance - RV32I
+# Performance (RV32I) (A35T/Vivado)
 
-| branch prediction    | CoreMarks/MHz  |  DMips/MHz   | Raystones |
-|----------------------|----------------|--------------|-----------|
-|     none             |  0.928         |   1.298      |  5.665    |
-| static (BTFNT)       |  1.118         |   1.488      |  6.633    |
-| static + RAS         |  1.147         |   1.528      |  6.795    | 
-| gshare               |  1.124         |   1.562      |  7.186    |
-| gshare + RAS         |  1.153         |   1.606      |  7.375    |
+| branch prediction    | CoreMarks/MHz  |  DMips/MHz   | Raystones | LUTs  | FFs   | MaxFreq |
+|----------------------|----------------|--------------|-----------|-------|-------|---------|
+|     none             |  0.928         |   1.298      |  5.665    | 909   | 517   | 125 MHz |
+| static (BTFNT)       |  1.118         |   1.488      |  6.633    | 938   | 516   | 125 MHz |
+| static + RAS         |  1.147         |   1.528      |  6.795    | 1040  | 676   | 105 MHz |
+| gshare               |  1.124         |   1.562      |  7.186    | 1297  | 547   | 120 MHz |
+| gshare + RAS         |  1.153         |   1.606      |  7.375    | 1388  | 711   | 100 MHz |
+
+# Performance (RV32IM) (A35T/Vivado)
+
+| branch prediction    | CoreMarks/MHz  |  DMips/MHz   | Raystones | LUTs  | FFs   | MaxFreq |
+|----------------------|----------------|--------------|-----------|-------|-------|---------|
+|     none             |                |              |           |       |       |     MHz |
+| static (BTFNT)       |                |              |           |       |       |     MHz |
+| static + RAS         |                |              |           |       |       |     MHz |
+| gshare               |                |              |           |       |       |     MHz |
+| gshare + RAS         |                |              |           |       |       |     MHz |
 
 # Debugger / disassembler
 
