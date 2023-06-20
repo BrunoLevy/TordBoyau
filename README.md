@@ -57,11 +57,11 @@ both projects, just make sure you target the same instruction set
 
 | branch prediction    | CoreMarks/MHz  |  DMips/MHz   | Raystones | LUTs  | FFs   | MaxFreq |
 |----------------------|----------------|--------------|-----------|-------|-------|---------|
-|     none             |                |              |           |       |       |     MHz |
-| static (BTFNT)       |                |              |           |       |       |     MHz |
-| static + RAS         |                |              |           |       |       |     MHz |
-| gshare               |                |              |           |       |       |     MHz |
-| gshare + RAS         |                |              |           |       |       |     MHz |
+|     none             | 2.387          |  1.341       | 15.296    |       |       |     MHz |
+| static (BTFNT)       | 2.763          |  1.545       | 16.097    |       |       |     MHz |
+| static + RAS         | 2.790          |  1.579       | 16.476    |       |       |     MHz |
+| gshare               | 2.837          |  1.597       | 17.753    |       |       |     MHz |
+| gshare + RAS         | 2.866          |  1.634       | 18.215    |       |       |     MHz |
 
 # Debugger / disassembler
 
