@@ -33,6 +33,10 @@ included firmware computes an image in raytracing and sends it to the
 TTY (1000000 bauds). It also measures the average CPI, and a
 'raystones' performance score (pixels/s/MHz).
 
+Some precompiled firmwares are available in `PRECOMPILED_FIRMWARE/<arch>/<progname>/PROGROM.hex` and `DATARAM.hex`.
+To use one of them, just copy `PROGROM.hex` and `DATARAM.hex` in
+`TordBoyau/` (the same directory that contains `soc.v`) and re-synthesize (or launch simulation).
+
 Other firmwares can be compiled, see [learn-fpga, pipeline
 tutorial](https://github.com/BrunoLevy/learn-fpga/blob/master/FemtoRV/TUTORIALS/FROM_BLINKER_TO_RISCV/PIPELINE.md)
 for more details (`PROGROM.hex` and `DATARAM.hex` are portable between
