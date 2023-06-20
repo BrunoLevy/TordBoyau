@@ -43,10 +43,30 @@ both projects, just make sure you target the same instruction set
 
 ![](Images/debugger.png)
 
+Simulation can be started using `run_verilator.sh`. If `CONFIG_DEBUG` is set in `soc.v`, then one can see the
+content of the pipeline stages, the hazards, register forwarding, branch prediction, return address stack.
+It is also possible to create "breakpoints", by defining the `breakpoint` signal in `TordBoyau5.v` (default
+breakpoint is on TTY character display). 
 
+# Sequential pipeline
 
+A completely sequential version `TordBoyau5_sequential` is included. It has a state machine that executes each
+stage sequentially, without hazard nor data forwarding. It is there to estimate an upper boundary of
+what maxfreq one can expect on a given FPGA.
 
 # Documentation on the design 
+
 - [Course - episode I](https://github.com/BrunoLevy/learn-fpga/blob/master/FemtoRV/TUTORIALS/FROM_BLINKER_TO_RISCV/README.md)
 - [Course - episode II](https://github.com/BrunoLevy/learn-fpga/blob/master/FemtoRV/TUTORIALS/FROM_BLINKER_TO_RISCV/PIPELINE.md)
 
+# Next steps / TODO
+
+- Write Amaranth glue code for LiteX, so that we can
+  [run Doom](https://github.com/BrunoLevy/learn-fpga/tree/master/LiteX/software/Doom) on it.
+  Doom already works for the simpler non-pipelined
+  [FemtoRV](https://github.com/BrunoLevy/learn-fpga/tree/master/FemtoRV) cores. Here we need to
+  adapt LiteX cache and plug it onto PROGROM and DATARAM.
+- It seems that alignment logic for load and store plays a role in the critical path.
+  A 6 stages pipeline may be more optimal, to be tested.
+- Write scripts to synthesize using `yosys` and `nextpnr-xilinx`
+- Write scripts for other boards (ULX3S, orange crab, ...)
