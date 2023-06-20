@@ -55,13 +55,16 @@ both projects, just make sure you target the same instruction set
 
 # Performance (RV32IM) (A35T/Vivado)
 
-| branch prediction    | CoreMarks/MHz  |  DMips/MHz   | Raystones | LUTs  | FFs   | MaxFreq |
-|----------------------|----------------|--------------|-----------|-------|-------|---------|
-|     none             | 2.387          |  1.341       | 15.296    |       |       |     MHz |
-| static (BTFNT)       | 2.763          |  1.545       | 16.097    |       |       |     MHz |
-| static + RAS         | 2.790          |  1.579       | 16.476    |       |       |     MHz |
-| gshare               | 2.837          |  1.597       | 17.753    |       |       |     MHz |
-| gshare + RAS         | 2.866          |  1.634       | 18.215    |       |       |     MHz |
+| branch prediction    | CoreMarks/MHz  |  DMips/MHz   | Raystones | LUTs  | FFs   | MaxFreq  |
+|----------------------|----------------|--------------|-----------|-------|-------|----------|
+|     none             | 2.387          |  1.341       | 15.296    | 1368  | 681   | < 80 MHz |
+| static (BTFNT)       | 2.763          |  1.545       | 16.097    | 1363  | 680   | < 80 MHz |
+| static + RAS         | 2.790          |  1.579       | 16.476    | 1478  | 840   | < 80 MHz |
+| gshare               | 2.837          |  1.597       | 17.753    | 1760  | 711   | < 80 MHz |
+| gshare + RAS         | 2.866          |  1.634       | 18.215    | 1801  | 875   | < 80 MHz |
+
+Fails to meet timings even at 80 MHz, to be investigated (note: however, seems to work
+at that frequency in practice, even at higher frequency).
 
 # Debugger / disassembler
 
@@ -85,6 +88,9 @@ what maxfreq one can expect on a given FPGA.
 
 # Next steps / TODO
 
+- Activating RAS makes maxfreq drop, to be investigated.
+- Activating RV32M makes maxfreq dramatically drop, to be investigated.
+- I don't have a Branch Target Buffer, I'm always computing the branch target, maybe it is not good.
 - Write Amaranth glue code for LiteX, so that we can
   [run Doom](https://github.com/BrunoLevy/learn-fpga/tree/master/LiteX/software/Doom) on it.
   Doom already works for the simpler non-pipelined
