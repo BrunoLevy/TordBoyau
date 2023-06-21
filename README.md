@@ -96,6 +96,12 @@ what maxfreq one can expect on a given FPGA. On the ARTY, it validates at 150 MH
    - Activating RAS makes maxfreq drop, to be investigated.
    - Activating RV32M makes maxfreq dramatically drop, to be investigated.
    - I don't have a Branch Target Buffer, I'm always computing the branch target, maybe it is not good.
+- RAM is loaded at the end of the Execute stage and written in Mem
+   stage. Maybe it is not good (especially if it uses two ports of the BRAM)
+- register bank is read at the beginning of Execute instead of Decode,
+   which is not classical. On the positive side, then register
+   forwarding muxes only need to be three-ways. On the negative side,
+   it probably makes the critical path longer.
 - Write Amaranth glue code for LiteX, so that we can
   [run Doom](https://github.com/BrunoLevy/learn-fpga/tree/master/LiteX/software/Doom) on it.
   Doom already works for the simpler non-pipelined
