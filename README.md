@@ -83,7 +83,7 @@ breakpoint is on TTY character display).
 
 A completely sequential version `TordBoyau5_sequential` is included. It has a state machine that executes each
 stage sequentially, without hazard nor data forwarding. It is there to estimate an upper boundary of
-what maxfreq one can expect on a given FPGA.
+what maxfreq one can expect on a given FPGA. On the ARTY, it validates at 150 MHz (still works at 160 MHz).
 
 # Documentation on the design 
 
@@ -92,9 +92,10 @@ what maxfreq one can expect on a given FPGA.
 
 # Next steps / TODO
 
-- Activating RAS makes maxfreq drop, to be investigated.
-- Activating RV32M makes maxfreq dramatically drop, to be investigated.
-- I don't have a Branch Target Buffer, I'm always computing the branch target, maybe it is not good.
+- Try to validate RV32IM at 140 MHz or so
+   - Activating RAS makes maxfreq drop, to be investigated.
+   - Activating RV32M makes maxfreq dramatically drop, to be investigated.
+   - I don't have a Branch Target Buffer, I'm always computing the branch target, maybe it is not good.
 - Write Amaranth glue code for LiteX, so that we can
   [run Doom](https://github.com/BrunoLevy/learn-fpga/tree/master/LiteX/software/Doom) on it.
   Doom already works for the simpler non-pipelined
