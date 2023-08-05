@@ -10,7 +10,13 @@ Included Vivado project is configured for an ARTY A35T
 - Included firmware computes a raytracing image and displays it on the TTY using ANSI codes
 - Connect to terminal using 1000000 bauds (see `terminal.sh`, adapt to your setup)
 
-Instructions for other boards / Yosys-NextPNR are coming
+## Instructions for other boards / Yosys-NextPNR
+
+Plug your board, then use `BOARDS/run_<BOARD_NAME>.sh`. Implemented for:
+- `ulx3s`
+
+(other boards are coming)
+
 
 # Configuration
 Several parameters can be configured in `soc.v`:
@@ -74,7 +80,7 @@ after line 1024 in `DATARAM.hex` (the core in `learn-fpga` is configured with
 
 ![](Images/debugger.png)
 
-Simulation can be started using `run_verilator.sh`. If `CONFIG_DEBUG` is set in `soc.v`, then one can see the
+Simulation can be started using `BOARDS/run_verilator.sh`. If `CONFIG_DEBUG` is set in `soc.v`, then one can see the
 content of the pipeline stages, the hazards, register forwarding, branch prediction, return address stack.
 It is also possible to create "breakpoints", by defining the `breakpoint` signal in `TordBoyau5.v` (default
 breakpoint is on TTY character display). 

@@ -22,14 +22,16 @@
  
 `include "PLL/femtopll.v"
 
+`ifndef BENCH
+
 `ifdef ECP5_EVN
 `define NEGATIVE_RESET
 `endif
 
 `ifdef ARTY
-`ifndef BENCH
 `define NEGATIVE_RESET
 `endif
+
 `endif
 
 module Clockworks 

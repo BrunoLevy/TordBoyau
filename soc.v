@@ -4,15 +4,21 @@
  * Configurable 5-stages pipelined RV32IM
  * Bruno Levy, Sept 2022
  */
+
+`ifndef BOARD
 `define ARTY
+`endif
 
-
+`ifndef BOARD_FREQ
 `define BOARD_FREQ 100
+`endif
 
 // Uncomment to change CPU freq
 // If undefined, the 100MHz clock of
 // the board is used.
+`ifndef CPU_FREQ
 `define CPU_FREQ   140
+`endif
 
 `define CONFIG_PC_PREDICT   // enables D -> F path (needed by RAS and GSHARE)
 `define CONFIG_RAS          // return address stack
@@ -24,7 +30,7 @@
                             // See "debugger" section in source 
                             // to define breakpoints
 
-//`define CONFIG_INITIALIZE // initialize register file and BHT table
+`define CONFIG_INITIALIZE // initialize register file and BHT table
                             // (required by Icarus/iverilog 
                             // and by some synth tools)
 
