@@ -20,11 +20,11 @@
 `define CPU_FREQ   140
 `endif
 
-`define CONFIG_PC_PREDICT   // enables D -> F path (needed by RAS and GSHARE)
-`define CONFIG_RAS          // return address stack
-`define CONFIG_GSHARE       // gshare branch prediction (or BTFNT if not set)
+//`define CONFIG_PC_PREDICT   // enables D -> F path (needed by RAS and GSHARE)
+//`define CONFIG_RAS          // return address stack
+//`define CONFIG_GSHARE       // gshare branch prediction (or BTFNT if not set)
 
-`define CONFIG_RV32M      // RV32M instruction set (MUL,DIV,REM)
+//`define CONFIG_RV32M      // RV32M instruction set (MUL,DIV,REM)
 
 //`define CONFIG_DEBUG      // debug mode, displays execution
                             // See "debugger" section in source 
