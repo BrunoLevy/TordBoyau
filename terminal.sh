@@ -8,4 +8,4 @@ BAUDS=1000000
 #screen $DEVICE $BAUDS
 
 # PICOCOM exit: <ctrl> a <ctrl> x   package: sudo apt-get install picocom
-picocom -b $BAUDS $DEVICE --imap lfcrlf,crcrlf --omap delbs,crlf --send-cmd "ascii-xfr -s -l 30 -n"
+picocom -b $BAUDS $DEVICE --imap lfcrlf,lfcrlf --omap delbs,crlf --send-cmd "ascii-xfr -s -l 30 -n"
